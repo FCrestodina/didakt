@@ -2,9 +2,8 @@
 import { useEditorStore } from '@/store/editorStore';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, Eye, ArrowLeft, Loader2 } from 'lucide-react';
+import { Save, Eye, ArrowLeft, Loader2, Settings } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 interface Props {
   courseId: string;
@@ -12,7 +11,7 @@ interface Props {
 }
 
 export function EditorHeader({ courseId, onSave }: Props) {
-  const { course, saving, dirty } = useEditorStore();
+  const { course, saving, dirty, setSettingsOpen } = useEditorStore();
 
   return (
     <header className="h-14 bg-white border-b border-gray-100 flex items-center px-4 gap-3 shrink-0">
@@ -25,15 +24,23 @@ export function EditorHeader({ courseId, onSave }: Props) {
       <Badge variant={course?.status ?? 'draft'}>
         {course?.status === 'published' ? 'Publicado' : 'Borrador'}
       </Badge>
-      {dirty && <span className="text-xs text-amber-500">● Sin guardar</span>}
+      {saving && <span className="text-xs text-indigo-400 flex items-center gap-1"><Loader2 size={12} className="animate-spin" /> Guardando...</span>}
+      {!saving && dirty && <span className="text-xs text-amber-500">● Sin guardar</span>}
+      {!saving && !dirty && <span className="text-xs text-green-500">✓ Guardado</span>}
+      <button
+        onClick={() => setSettingsOpen(true)}
+        className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+        title="Configuración"
+      >
+        <Settings size={18} />
+      </button>
       <Link href={`/courses/${courseId}/preview`} target="_blank">
         <Button variant="secondary" size="sm">
           <Eye size={14} /> Preview
         </Button>
       </Link>
       <Button onClick={onSave} disabled={saving || !dirty} size="sm">
-        {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
-        Guardar
+        <Save size={14} /> Guardar
       </Button>
     </header>
   );

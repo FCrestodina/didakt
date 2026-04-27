@@ -9,7 +9,10 @@ export type BlockType =
   | 'bullet-list'
   | 'numbered-list'
   | 'quote'
-  | 'callout';
+  | 'callout'
+  | 'code'
+  | 'flashcard'
+  | 'timeline';
 
 export interface BaseBlock {
   id: string;
@@ -90,6 +93,35 @@ export interface CalloutBlock extends BaseBlock {
   content: string;
 }
 
+export interface CodeBlock extends BaseBlock {
+  type: 'code';
+  code: string;
+  language: string;
+}
+
+export interface FlashcardItem {
+  id: string;
+  front: string;
+  back: string;
+}
+
+export interface FlashcardBlock extends BaseBlock {
+  type: 'flashcard';
+  items: FlashcardItem[];
+}
+
+export interface TimelineItem {
+  id: string;
+  date: string;
+  title: string;
+  description: string;
+}
+
+export interface TimelineBlock extends BaseBlock {
+  type: 'timeline';
+  items: TimelineItem[];
+}
+
 export type Block =
   | HeadingBlock
   | TextBlock
@@ -101,7 +133,10 @@ export type Block =
   | BulletListBlock
   | NumberedListBlock
   | QuoteBlock
-  | CalloutBlock;
+  | CalloutBlock
+  | CodeBlock
+  | FlashcardBlock
+  | TimelineBlock;
 
 export interface Lesson {
   id: string;

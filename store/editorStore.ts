@@ -43,7 +43,6 @@ interface EditorState {
   addLesson: () => void;
   updateLesson: (lessonId: string, title: string) => void;
   deleteLesson: (lessonId: string) => void;
-  reorderLessons: (from: number, to: number) => void;
 
   addBlock: (type: BlockType) => void;
   updateBlock: (blockId: string, data: Partial<Block>) => void;
@@ -93,14 +92,6 @@ export const useEditorStore = create<EditorState>((set, get) => ({
     if (!s.course) return {};
     const lessons = s.course.lessons.filter((l) => l.id !== lessonId);
     return { course: { ...s.course, lessons }, activeLessonId: lessons[0]?.id ?? null, dirty: true };
-  }),
-
-  reorderLessons: (from, to) => set((s) => {
-    if (!s.course) return {};
-    const lessons = [...s.course.lessons];
-    const [item] = lessons.splice(from, 1);
-    lessons.splice(to, 0, item);
-    return { course: { ...s.course, lessons }, dirty: true };
   }),
 
   addBlock: (type) => set((s) => {

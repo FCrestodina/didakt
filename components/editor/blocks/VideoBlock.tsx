@@ -12,7 +12,7 @@ export function VideoBlockEditor({ block }: { block: T }) {
   return (
     <div className="space-y-2">
       <Input
-        placeholder="URL de YouTube o Vimeo"
+        placeholder="URL de YouTube"
         defaultValue={block.url}
         onBlur={(e) => updateBlock(block.id, { url: e.target.value })}
       />

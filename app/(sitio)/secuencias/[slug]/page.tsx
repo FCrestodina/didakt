@@ -98,7 +98,7 @@ export default async function SecuenciaPage({ params }: Props) {
                 className="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-noche transition-opacity hover:opacity-90"
                 style={{ backgroundColor: acento }}
               >
-                Abrir {recurso.nombre.toLowerCase()}
+                Abrir {recurso.nombre}
                 <ArrowUpRight size={15} />
               </Link>
             </div>

@@ -15,7 +15,7 @@ export function EditorHeader({ courseId, onSave }: Props) {
 
   return (
     <header className="h-14 bg-white border-b border-gray-100 flex items-center px-4 gap-3 shrink-0">
-      <Link href="/" className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
+      <Link href="/admin" className="p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
         <ArrowLeft size={18} />
       </Link>
       <div className="flex-1 min-w-0">

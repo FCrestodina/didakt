@@ -1,6 +1,55 @@
 @import "tailwindcss";
 
+/* Marca Crestech — los mismos valores que crestech-web (`src/app/globals.css`
+   y `src/components/Logo.tsx`): fondo negro y un dorado de tres paradas.
+   El catálogo público usa esta paleta; el editor y el panel siguen en claro,
+   porque son herramientas de trabajo y no vidriera. */
+@theme {
+  --color-noche: #0a0a0a;
+  --color-noche-2: #111111;
+  --color-noche-3: #171717;
+
+  --color-oro-claro: #f5dc7b;
+  --color-oro: #d4af37;
+  --color-oro-oscuro: #8b6914;
+
+  --color-tenue: #cccccc;
+  --color-apagado: #888888;
+}
+
+:root {
+  --oro-rgb: 212, 175, 55;
+}
+
 body {
-  font-family: Inter, sans-serif;
+  font-family: var(--font-sans), Inter, system-ui, sans-serif;
   color: #111827;
+}
+
+/* Accesibilidad: mismo outline dorado que el resto de la marca. */
+:focus-visible {
+  outline: 2px solid var(--color-oro);
+  outline-offset: 3px;
+}
+
+.texto-oro {
+  background: linear-gradient(
+    135deg,
+    var(--color-oro-claro) 0%,
+    var(--color-oro) 40%,
+    var(--color-oro-oscuro) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.borde-oro {
+  border: 1px solid rgba(var(--oro-rgb), 0.25);
+}
+
+.linea-oro {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--color-oro), transparent);
+  opacity: 0.4;
 }

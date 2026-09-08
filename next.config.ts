@@ -10,6 +10,11 @@ const nextConfig: NextConfig = {
       root: path.resolve(__dirname),
     },
   } as any,
+  // Mundialito es un único index.html autocontenido: se sirve como estático
+  // desde public/ y este rewrite le da la URL limpia del catálogo.
+  async rewrites() {
+    return [{ source: '/mundialito', destination: '/mundialito/index.html' }];
+  },
 };
 
 export default nextConfig;

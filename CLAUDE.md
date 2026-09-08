@@ -26,7 +26,28 @@ Or use the helper script: `C:\Users\FCRESTODINA\tools\start-mongo.ps1`
 
 ## Architecture
 
-Full-stack Next.js 16 (App Router). No separate backend — two API routes handle all persistence:
+Full-stack Next.js 16 (App Router). The repo is **Crestech Didáctico**: a public catalogue of
+didactic sequences plus the block editor that authors some of them. Two things live here that used
+to be separate concerns, so keep them separate when editing:
+
+| Zona | Rutas | Tema | Depende de la base |
+|---|---|---|---|
+| Catálogo público | `app/(sitio)/` — `/`, `/secuencias/[slug]` | Marca Crestech, oscuro | **No** |
+| Secuencias alojadas | `/mundialito` (y, al migrarlas, `/stem/*` y `/billetera-virtual/*`) | El de cada app | Según la app |
+| Panel + editor | `/admin`, `/courses/[id]/edit`, `/courses/[id]/preview` | Claro | Sí (MongoDB) |
+
+**El catálogo no puede depender de la base.** Las secuencias alojadas se declaran en
+`content/secuencias.ts` (en código, no en base) justamente para eso; las secuencias del editor se
+suman encima desde el cliente y **fallan en silencio** si Mongo no responde
+(`components/sitio/SecuenciasDelEditor.tsx`). Si agregás algo a la home, mantené esa propiedad: sin
+base de datos, `/` tiene que seguir renderizando.
+
+**Secuencias en migración.** Cada entrada de `content/secuencias.ts` tiene su ruta interna
+definitiva desde el día uno. Mientras `estado` sea `'en-migracion'`, `enlaceDeRecurso()` manda al
+deploy viejo (`urlExterna`); cuando la app se mude a este repo, se cambia el estado a `'disponible'`
+y los links pasan a ser internos sin tocar nada más.
+
+Persistencia del editor — dos API routes, sin backend separado:
 
 - `app/api/courses/route.ts` — GET list, POST create
 - `app/api/courses/[id]/route.ts` — GET, PUT, DELETE single course

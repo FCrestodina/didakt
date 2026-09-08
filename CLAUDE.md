@@ -10,19 +10,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev      # dev server (port 3000, or next available)
 npm run build    # production build + type check
 npm run lint     # ESLint
+npm test         # vitest — 275 tests
 npx tsc --noEmit # type check only
+npm run db:push  # aplica los tres esquemas Drizzle a DATABASE_URL
 ```
 
-**MongoDB must be running first.** Portable instance at `C:\Users\FCRESTODINA\tools\mongodb\bin\mongod.exe`:
+**Una sola base: Postgres.** Copiá `.env.example` a `.env.local`, completá `DATABASE_URL` y corré
+`npm run db:push`. Sin base andan igual el catálogo público, `/stem/robot` y `/mundialito`; el resto
+no.
 
-```powershell
-# Start (run once, stays running in background)
-Start-Process "C:\Users\FCRESTODINA\tools\mongodb\bin\mongod.exe" `
-  -ArgumentList "--dbpath C:\Users\FCRESTODINA\tools\mongodb-data --port 27017" `
-  -WindowStyle Hidden
-```
-
-Or use the helper script: `C:\Users\FCRESTODINA\tools\start-mongo.ps1`
+Ojo: `db:push` **no lee `.env.local`** (eso lo hace Next, no drizzle-kit) — exportá `DATABASE_URL`
+en la shell antes de correrlo.
 
 ## Architecture
 
@@ -36,11 +34,11 @@ to be separate concerns, so keep them separate when editing:
 | Secuencia STEM+ | `/stem/robot`, `/stem/misiones/*` + `app/api/salas/*` | Claro, propio | Postgres (`/robot` no la toca) |
 | Billetera Virtual | `/billetera-virtual/*` + `app/api/{classrooms,students,payments,movements}` | Claro, propio | Postgres |
 | Mundialito | `/mundialito` (estático en `public/`) | Claro, propio | Ninguna (`localStorage`) |
-| Panel + editor | `/admin`, `/courses/[id]/edit`, `/courses/[id]/preview` | Claro | MongoDB |
+| Panel + editor | `/admin`, `/courses/[id]/edit`, `/courses/[id]/preview` | Claro | Postgres |
 
 **El catálogo no puede depender de la base.** Las secuencias alojadas se declaran en
 `content/secuencias.ts` (en código, no en base) justamente para eso; las secuencias del editor se
-suman encima desde el cliente y **fallan en silencio** si Mongo no responde
+suman encima desde el cliente y **fallan en silencio** si la base no responde
 (`components/sitio/SecuenciasDelEditor.tsx`). Si agregás algo a la home, mantené esa propiedad: sin
 base de datos, `/` tiene que seguir renderizando.
 
@@ -58,12 +56,15 @@ Cada secuencia vino de su propio repo (`secuencia-stem-primer-ciclo`, `billetera
   claro y `color-scheme: light` (las apps son de uso escolar y el modo oscuro del celular las deja
   ilegibles). Las capturas de sus manuales del docente son de esas pantallas — **no les cambies la
   tipografía sin regenerar los manuales**.
-- **Un solo Postgres, esquemas separados**: `lib/billetera/schema.ts` y `lib/stem/schema.ts`, los dos
-  en `drizzle.config.ts`. Las tablas no se pisan (`classrooms`/`students`/`movements`/`promo_usages`
-  contra `salas`/`misiones`), así que no hace falta prefijarlas. `npm run db:push` aplica las dos.
-- **Los tests de las secuencias son la red de seguridad del repo** (254: 56 de billetera + 198 de
-  STEM). didakt no tiene tests propios, así que si tocás algo de `lib/stem/` o `lib/billetera/`,
-  `npm test` es lo único que te avisa.
+- **Un solo Postgres, tres esquemas separados**: `lib/billetera/schema.ts`, `lib/stem/schema.ts` y
+  `lib/editor/schema.ts`, los tres en `drizzle.config.ts`. Las tablas no se pisan
+  (`classrooms`/`students`/`movements`/`promo_usages` contra `salas`/`misiones` contra `courses`),
+  así que no hace falta prefijarlas. `npm run db:push` aplica los tres.
+- **Cada zona abre su propio pool** (`lib/billetera/db.ts`, `lib/stem/db.ts`, `lib/editor/db.ts`)
+  contra la misma base. Funciona, pero son tres pools donde alcanzaría uno: consolidarlos al tunear
+  el VPS.
+- **Los tests son la red de seguridad del repo** (275: 56 de billetera, 198 de STEM, 21 del editor).
+  Si tocás `lib/`, `npm test` es lo único que te avisa.
 
 Persistencia del editor — dos API routes, sin backend separado:
 
@@ -108,9 +109,19 @@ Current block types: `heading`, `text`, `image`, `video`, `quiz`, `accordion`, `
 
 Stateful client component tracking lesson completion (`Set<number>`). When all lessons are marked done it renders a completion screen instead of the lesson content. The "Siguiente" button both marks current lesson complete and advances — last lesson shows "Finalizar curso".
 
-### MongoDB schema
+### Persistencia del editor (`lib/editor/`)
 
-`lib/models/Course.ts` uses `strict: false` on the blocks subdocument — blocks are stored as raw JSON. TypeScript types are the source of truth for block shape, not Mongoose.
+`schema.ts` guarda `lessons` como **`jsonb`** — el equivalente exacto del `strict: false` que tenía
+el subdocumento de bloques en Mongo. La fuente de verdad de la forma de un bloque siguen siendo los
+tipos de `types/index.ts`, no el esquema de la base.
+
+`cursos.ts` es la capa de datos, y **`camposEditables()` es lo que hay que respetar**: el editor
+manda el curso entero en cada PUT, `id` y timestamps incluidos. Mongoose los descartaba por esquema;
+Drizzle no filtra nada, así que sin esa función un PUT podría reescribir la clave primaria o falsear
+el `createdAt`. **Si agregás un campo a `Course`, agregalo también ahí o se descarta en silencio.**
+
+`esIdValido()` corta los ids que no son UUID antes de que lleguen a la query: si no, Postgres tira
+error de tipo y el handler devuelve 500 en vez de 404. Los ids viejos de Mongo (24 hex) caen por ahí.
 
 ### Conventions
 

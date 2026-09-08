@@ -1,16 +1,20 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
-import Course from '@/lib/models/Course';
+import { crearCurso, listarCursos } from '@/lib/editor/cursos';
 
 export async function GET() {
-  await connectDB();
-  const courses = await Course.find().sort({ updatedAt: -1 }).lean();
-  return NextResponse.json(courses);
+  const cursos = await listarCursos();
+  return NextResponse.json(cursos);
 }
 
 export async function POST(req: Request) {
-  await connectDB();
-  const body = await req.json();
-  const course = await Course.create(body);
-  return NextResponse.json(course, { status: 201 });
+  let cuerpo: unknown;
+  try {
+    cuerpo = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Petición inválida.' }, { status: 400 });
+  }
+
+  const curso = await crearCurso(cuerpo);
+  if (!curso) return NextResponse.json({ error: 'Falta el título.' }, { status: 400 });
+  return NextResponse.json(curso, { status: 201 });
 }

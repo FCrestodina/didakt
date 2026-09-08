@@ -18,8 +18,8 @@ export default function EditCoursePage({ params }: { params: Promise<{ id: strin
   useEffect(() => {
     fetch(`/api/courses/${id}`)
       .then((r) => r.json())
-      .then((data: Course & { _id: string }) => {
-        setCourse({ ...data, _id: data._id?.toString() });
+      .then((data: Course & { id: string }) => {
+        setCourse(data);
         setLoading(false);
       });
   }, [id]);

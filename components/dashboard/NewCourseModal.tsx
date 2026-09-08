@@ -32,7 +32,7 @@ export function NewCourseModal({ onClose }: Props) {
       }),
     });
     const course = await res.json();
-    router.push(`/courses/${course._id}/edit`);
+    router.push(`/courses/${course.id}/edit`);
   };
 
   return (

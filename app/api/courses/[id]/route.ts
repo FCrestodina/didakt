@@ -1,27 +1,33 @@
 import { NextResponse } from 'next/server';
-import { connectDB } from '@/lib/mongodb';
-import Course from '@/lib/models/Course';
+import { actualizarCurso, borrarCurso, obtenerCurso } from '@/lib/editor/cursos';
 
-export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  await connectDB();
+type Contexto = { params: Promise<{ id: string }> };
+
+export async function GET(_: Request, { params }: Contexto) {
   const { id } = await params;
-  const course = await Course.findById(id).lean();
-  if (!course) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json(course);
+  const curso = await obtenerCurso(id);
+  if (!curso) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(curso);
 }
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  await connectDB();
+export async function PUT(req: Request, { params }: Contexto) {
   const { id } = await params;
-  const body = await req.json();
-  const course = await Course.findByIdAndUpdate(id, body, { new: true }).lean();
-  if (!course) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  return NextResponse.json(course);
+
+  let cuerpo: unknown;
+  try {
+    cuerpo = await req.json();
+  } catch {
+    return NextResponse.json({ error: 'Petición inválida.' }, { status: 400 });
+  }
+
+  const curso = await actualizarCurso(id, cuerpo);
+  if (!curso) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  return NextResponse.json(curso);
 }
 
-export async function DELETE(_: Request, { params }: { params: Promise<{ id: string }> }) {
-  await connectDB();
+export async function DELETE(_: Request, { params }: Contexto) {
   const { id } = await params;
-  await Course.findByIdAndDelete(id);
+  const borrado = await borrarCurso(id);
+  if (!borrado) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

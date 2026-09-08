@@ -6,7 +6,7 @@ import { BookOpen, Edit, Eye, Trash2, GraduationCap, Copy } from 'lucide-react';
 import Link from 'next/link';
 
 interface Props {
-  course: Course & { _id: string; updatedAt: string; lessons: any[] };
+  course: Course & { id: string; updatedAt: string; lessons: any[] };
   onDelete: (id: string) => void;
   onDuplicate: (id: string) => void;
 }
@@ -38,7 +38,7 @@ export function CourseCard({ course, onDelete, onDuplicate }: Props) {
           <GraduationCap size={40} style={{ color: course.theme?.primaryColor ?? '#6366f1' }} />
         )}
         <button
-          onClick={() => onDuplicate(course._id)}
+          onClick={() => onDuplicate(course.id)}
           className="absolute top-2 right-2 p-1.5 rounded-lg bg-white/80 text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-all"
           title="Duplicar"
         >
@@ -58,13 +58,13 @@ export function CourseCard({ course, onDelete, onDuplicate }: Props) {
           {course.updatedAt && <span className="ml-auto">{timeAgo(course.updatedAt)}</span>}
         </div>
         <div className="flex gap-2">
-          <Link href={`/courses/${course._id}/edit`} className="flex-1">
+          <Link href={`/courses/${course.id}/edit`} className="flex-1">
             <Button variant="default" size="sm" className="w-full"><Edit size={12} /> Editar</Button>
           </Link>
-          <Link href={`/courses/${course._id}/preview`} target="_blank">
+          <Link href={`/courses/${course.id}/preview`} target="_blank">
             <Button variant="secondary" size="icon"><Eye size={14} /></Button>
           </Link>
-          <Button variant="ghost" size="icon" onClick={() => onDelete(course._id)} className="text-gray-300 hover:text-red-400">
+          <Button variant="ghost" size="icon" onClick={() => onDelete(course.id)} className="text-gray-300 hover:text-red-400">
             <Trash2 size={14} />
           </Button>
         </div>

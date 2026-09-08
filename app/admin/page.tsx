@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { GraduationCap, Plus, Loader2, Search, ArrowUpRight } from 'lucide-react';
 
-type CourseWithId = Course & { _id: string; updatedAt: string };
+type CourseWithId = Course & { id: string; updatedAt: string };
 
 export default function PanelPage() {
   const [courses, setCourses] = useState<CourseWithId[]>([]);
@@ -43,17 +43,26 @@ export default function PanelPage() {
   const handleDelete = async (id: string) => {
     if (!confirm('¿Eliminar esta secuencia?')) return;
     await fetch(`/api/courses/${id}`, { method: 'DELETE' });
-    setCourses((prev) => prev.filter((c) => c._id !== id));
+    setCourses((prev) => prev.filter((c) => c.id !== id));
   };
 
   const handleDuplicate = async (id: string) => {
-    const original = courses.find((c) => c._id === id);
+    const original = courses.find((c) => c.id === id);
     if (!original) return;
-    const { _id, createdAt, updatedAt, ...body } = original;
+    // Se copian sólo los campos editables: el id y los timestamps los pone la
+    // base. Es la misma lista que acepta el POST (`camposEditables`).
+    const { title, description, coverImage, theme, lessons } = original;
     const res = await fetch('/api/courses', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...body, title: `${body.title} (copia)`, status: 'draft' }),
+      body: JSON.stringify({
+        title: `${title} (copia)`,
+        description,
+        coverImage,
+        theme,
+        lessons,
+        status: 'draft',
+      }),
     });
     const created = await res.json();
     setCourses((prev) => [created, ...prev]);
@@ -95,8 +104,8 @@ export default function PanelPage() {
           <div className="text-center py-24 space-y-3">
             <h2 className="text-xl font-semibold text-gray-700">No se pudo leer la base</h2>
             <p className="text-gray-400 max-w-md mx-auto">
-              El editor de bloques necesita MongoDB. Revisá que la instancia esté corriendo y que
-              <code className="mx-1 text-gray-500">MONGODB_URI</code>
+              El editor de bloques necesita Postgres. Revisá que la base esté corriendo y que
+              <code className="mx-1 text-gray-500">DATABASE_URL</code>
               esté definida.
             </p>
             <Button variant="secondary" onClick={load} className="mt-2">
@@ -128,7 +137,7 @@ export default function PanelPage() {
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {filtered.map((course) => (
-                  <CourseCard key={course._id} course={course} onDelete={handleDelete} onDuplicate={handleDuplicate} />
+                  <CourseCard key={course.id} course={course} onDelete={handleDelete} onDuplicate={handleDuplicate} />
                 ))}
                 {!search && (
                   <button

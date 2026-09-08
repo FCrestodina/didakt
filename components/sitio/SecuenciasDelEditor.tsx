@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, BookOpen } from 'lucide-react';
 import type { Course } from '@/types';
 
-type CursoPublicado = Course & { _id: string };
+type CursoPublicado = Course & { id: string };
 
 /**
  * Secuencias armadas con el editor de bloques. Son las únicas entradas del
@@ -48,8 +48,8 @@ export function SecuenciasDelEditor() {
           const lecciones = curso.lessons?.length ?? 0;
           return (
             <Link
-              key={curso._id}
-              href={`/courses/${curso._id}/preview`}
+              key={curso.id}
+              href={`/courses/${curso.id}/preview`}
               className="group flex flex-col overflow-hidden rounded-2xl border border-white/8 bg-noche-2 transition-colors hover:border-white/20"
             >
               <div className="h-1 w-full" style={{ backgroundColor: acento }} />

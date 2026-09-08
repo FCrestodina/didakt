@@ -123,6 +123,25 @@ el `createdAt`. **Si agregás un campo a `Course`, agregalo también ahí o se d
 `esIdValido()` corta los ids que no son UUID antes de que lleguen a la query: si no, Postgres tira
 error de tipo y el handler devuelve 500 en vez de 404. Los ids viejos de Mongo (24 hex) caen por ahí.
 
+### Deploy
+
+VPS propio (Ubuntu + Node 24 + PM2 + Nginx + Certbot + Postgres local), **no**
+Railway como el resto de los repos personales. Runbook completo en
+[`docs/deploy-vps.md`](docs/deploy-vps.md); config en `ecosystem.config.js` y
+`docs/nginx-crestech-didactico.conf`. `git push` **no** deploya: el deploy es manual.
+
+`/api/health` distingue tres estados a propósito — `sin-configurar` no es lo mismo que
+`error`, porque el catálogo, `/stem/robot` y `/mundialito` andan sin base. Sólo devuelve 503
+cuando `DATABASE_URL` está definida y la base no responde.
+
+**HTTPS no es opcional**: el micrófono del Robot mensajero y la cámara de la Billetera sólo
+los habilita el navegador sobre HTTPS o localhost.
+
+`images.remotePatterns` **se sacó a propósito** y no hay que reponerlo sin pensarlo: ningún
+componente usa `next/image` (las tres imágenes van con `<img>` crudo), así que con `'**'`
+el endpoint `/_next/image` era un proxy abierto — se lo verificó sirviendo un PNG de un host
+externo. Si algún día se usa `next/image` con imágenes de afuera, listar **sólo** esos hosts.
+
 ### Conventions
 
 - `@/*` maps to project root (no `src/` directory)

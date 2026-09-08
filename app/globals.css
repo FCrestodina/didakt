@@ -53,3 +53,35 @@ body {
   background: linear-gradient(90deg, transparent, var(--color-oro), transparent);
   opacity: 0.4;
 }
+
+/* Las secuencias alojadas traen su propio tema. Son apps de uso escolar
+   diseñadas sólo en claro: sin esto, el modo oscuro del celular o la tablet
+   invierte el fondo y deja los textos ilegibles. */
+.billetera-tema {
+  color-scheme: light;
+}
+
+.stem-tema {
+  color-scheme: light;
+}
+
+/* Accesibilidad: el manual del docente de STEM pide animaciones breves y sin
+   destellos. Si el sistema pide menos movimiento, la ejecución del robot sigue
+   siendo paso a paso pero sin transiciones. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* El tablero de STEM se dibuja y se toca: evitamos que el navegador interprete
+   el arrastre sobre una celda o sobre el lienzo como scroll o zoom. */
+.sin-gestos {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

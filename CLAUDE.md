@@ -30,11 +30,13 @@ Full-stack Next.js 16 (App Router). The repo is **Crestech Didáctico**: a publi
 didactic sequences plus the block editor that authors some of them. Two things live here that used
 to be separate concerns, so keep them separate when editing:
 
-| Zona | Rutas | Tema | Depende de la base |
+| Zona | Rutas | Tema | Base de datos |
 |---|---|---|---|
-| Catálogo público | `app/(sitio)/` — `/`, `/secuencias/[slug]` | Marca Crestech, oscuro | **No** |
-| Secuencias alojadas | `/mundialito` (y, al migrarlas, `/stem/*` y `/billetera-virtual/*`) | El de cada app | Según la app |
-| Panel + editor | `/admin`, `/courses/[id]/edit`, `/courses/[id]/preview` | Claro | Sí (MongoDB) |
+| Catálogo público | `app/(sitio)/` — `/`, `/secuencias/[slug]` | Marca Crestech, oscuro | **Ninguna** |
+| Secuencia STEM+ | `/stem/robot`, `/stem/misiones/*` + `app/api/salas/*` | Claro, propio | Postgres (`/robot` no la toca) |
+| Billetera Virtual | `/billetera-virtual/*` + `app/api/{classrooms,students,payments,movements}` | Claro, propio | Postgres |
+| Mundialito | `/mundialito` (estático en `public/`) | Claro, propio | Ninguna (`localStorage`) |
+| Panel + editor | `/admin`, `/courses/[id]/edit`, `/courses/[id]/preview` | Claro | MongoDB |
 
 **El catálogo no puede depender de la base.** Las secuencias alojadas se declaran en
 `content/secuencias.ts` (en código, no en base) justamente para eso; las secuencias del editor se
@@ -42,10 +44,26 @@ suman encima desde el cliente y **fallan en silencio** si Mongo no responde
 (`components/sitio/SecuenciasDelEditor.tsx`). Si agregás algo a la home, mantené esa propiedad: sin
 base de datos, `/` tiene que seguir renderizando.
 
-**Secuencias en migración.** Cada entrada de `content/secuencias.ts` tiene su ruta interna
-definitiva desde el día uno. Mientras `estado` sea `'en-migracion'`, `enlaceDeRecurso()` manda al
-deploy viejo (`urlExterna`); cuando la app se mude a este repo, se cambia el estado a `'disponible'`
-y los links pasan a ser internos sin tocar nada más.
+### Cómo conviven las secuencias alojadas
+
+Cada secuencia vino de su propio repo (`secuencia-stem-primer-ciclo`, `billetera-virtual-educativa`,
+`mundialito-escolar`) y se movió acá sin reescribirse. Las reglas que hacen que no se pisen:
+
+- **Páginas namespaceadas, API no.** Las páginas viven bajo el prefijo de su secuencia; las rutas de
+  API se dejaron **donde estaban** porque no colisionan (`/api/salas/*` contra
+  `/api/classrooms|students|payments|movements` contra `/api/courses`). Eso evitó reescribir cada
+  `fetch` y cada mock de los tests. Si agregás una secuencia con una ruta de API que sí colisione,
+  namespaceala; no renombres las existentes.
+- **Cada secuencia trae su tema en su `layout.tsx`**, no en `globals.css`: fuente propia, fondo
+  claro y `color-scheme: light` (las apps son de uso escolar y el modo oscuro del celular las deja
+  ilegibles). Las capturas de sus manuales del docente son de esas pantallas — **no les cambies la
+  tipografía sin regenerar los manuales**.
+- **Un solo Postgres, esquemas separados**: `lib/billetera/schema.ts` y `lib/stem/schema.ts`, los dos
+  en `drizzle.config.ts`. Las tablas no se pisan (`classrooms`/`students`/`movements`/`promo_usages`
+  contra `salas`/`misiones`), así que no hace falta prefijarlas. `npm run db:push` aplica las dos.
+- **Los tests de las secuencias son la red de seguridad del repo** (254: 56 de billetera + 198 de
+  STEM). didakt no tiene tests propios, así que si tocás algo de `lib/stem/` o `lib/billetera/`,
+  `npm test` es lo único que te avisa.
 
 Persistencia del editor — dos API routes, sin backend separado:
 

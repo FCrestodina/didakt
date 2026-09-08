@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { ArrowLeft, ArrowUpRight, Download, ExternalLink } from 'lucide-react';
-import { SECUENCIAS, NIVELES, buscarSecuencia, enlaceDeRecurso } from '@/content/secuencias';
+import { ArrowLeft, ArrowUpRight, Download } from 'lucide-react';
+import { SECUENCIAS, NIVELES, buscarSecuencia } from '@/content/secuencias';
 
 // En Next 16 los params de ruta son una Promise y hay que await-earlos en un
 // server component (ver el header del CLAUDE.md del repo).
@@ -81,45 +81,29 @@ export default async function SecuenciaPage({ params }: Props) {
         </h2>
 
         <div className="mt-4 space-y-3">
-          {secuencia.recursos.map((recurso) => {
-            const { href, externo } = enlaceDeRecurso(secuencia, recurso);
-            return (
-              <div
-                key={recurso.slug}
-                className="rounded-2xl border border-white/8 bg-noche-2 p-6"
-              >
-                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <h3 className="font-semibold text-white">{recurso.nombre}</h3>
-                  {recurso.momento && (
-                    <span className="text-[12px]" style={{ color: acento }}>
-                      {recurso.momento}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-tenue">{recurso.descripcion}</p>
-
-                <a
-                  href={href}
-                  {...(externo ? { target: '_blank', rel: 'noreferrer' } : {})}
-                  className="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-noche transition-opacity hover:opacity-90"
-                  style={{ backgroundColor: acento }}
-                >
-                  Abrir {recurso.nombre.toLowerCase()}
-                  {externo ? <ExternalLink size={14} /> : <ArrowUpRight size={15} />}
-                </a>
+          {secuencia.recursos.map((recurso) => (
+            <div key={recurso.slug} className="rounded-2xl border border-white/8 bg-noche-2 p-6">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h3 className="font-semibold text-white">{recurso.nombre}</h3>
+                {recurso.momento && (
+                  <span className="text-[12px]" style={{ color: acento }}>
+                    {recurso.momento}
+                  </span>
+                )}
               </div>
-            );
-          })}
-        </div>
+              <p className="mt-2 text-sm leading-relaxed text-tenue">{recurso.descripcion}</p>
 
-        {secuencia.estado === 'en-migracion' && (
-          <p className="mt-4 text-[12px] leading-relaxed text-apagado">
-            Esta secuencia todavía se sirve desde su servidor original, así que los botones abren
-            una pestaña nueva. Cuando termine de mudarse va a vivir en{' '}
-            <code className="text-tenue">{secuencia.recursos[0]?.ruta}</code>, dentro de este mismo
-            sitio.
-          </p>
-        )}
+              <Link
+                href={recurso.ruta}
+                className="mt-4 inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium text-noche transition-opacity hover:opacity-90"
+                style={{ backgroundColor: acento }}
+              >
+                Abrir {recurso.nombre.toLowerCase()}
+                <ArrowUpRight size={15} />
+              </Link>
+            </div>
+          ))}
+        </div>
       </section>
 
       {secuencia.materiales.length > 0 && (

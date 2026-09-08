@@ -13,23 +13,14 @@
 
 export type NivelEducativo = 'inicial' | 'primario' | 'secundario';
 
-/**
- * - `disponible`: ya se sirve desde este deploy, en la ruta interna del recurso.
- * - `en-migracion`: todavía la sirve su deploy viejo (`urlExterna`). La ruta
- *   interna ya está decidida y es la que va a quedar cuando se mude.
- */
-export type EstadoSecuencia = 'disponible' | 'en-migracion';
-
 export interface RecursoSecuencia {
   slug: string;
   nombre: string;
   descripcion: string;
   /** En qué momento de la secuencia se usa. */
   momento?: string;
-  /** Ruta definitiva dentro de Crestech Didáctico. */
+  /** Ruta dentro de Crestech Didáctico. */
   ruta: string;
-  /** Path equivalente en el deploy viejo, mientras la secuencia esté en migración. */
-  rutaExterna?: string;
 }
 
 export interface MaterialDocente {
@@ -52,9 +43,6 @@ export interface SecuenciaAlojada {
   programa?: string;
   /** Color de acento de la ficha. */
   acento: string;
-  estado: EstadoSecuencia;
-  /** Deploy que sirve la secuencia mientras `estado` sea `en-migracion`. */
-  urlExterna?: string;
   recursos: RecursoSecuencia[];
   materiales: MaterialDocente[];
   repo: string;
@@ -73,8 +61,6 @@ export const SECUENCIAS: SecuenciaAlojada[] = [
     areas: ['Pensamiento computacional', 'STEM+'],
     programa: 'Buenos Aires Aprende',
     acento: '#38bdf8',
-    estado: 'en-migracion',
-    urlExterna: 'https://app-production-176a.up.railway.app',
     recursos: [
       {
         slug: 'robot',
@@ -83,7 +69,6 @@ export const SECUENCIAS: SecuenciaAlojada[] = [
         descripcion:
           'Simulador para probar indicaciones orales. Distingue la instrucción que se puede ejecutar de la que le falta información, de la que está fuera del repertorio del robot y del fallo de reconocimiento. Entrada por voz y escrita, tres misiones, sin base de datos.',
         ruta: '/stem/robot',
-        rutaExterna: '/robot',
       },
       {
         slug: 'misiones',
@@ -92,7 +77,6 @@ export const SECUENCIAS: SecuenciaAlojada[] = [
         descripcion:
           'La clase redibuja los cuatro símbolos que acordó en papel; cada grupo arma una misión con escenario, personaje, salida y meta; y el grupo visitante la juega en una sala de solo lectura. Una misión sólo se publica con una solución comprobada. La persistencia es por sala de clase, no por estudiante.',
         ruta: '/stem/misiones',
-        rutaExterna: '/misiones',
       },
     ],
     materiales: [
@@ -116,8 +100,6 @@ export const SECUENCIAS: SecuenciaAlojada[] = [
     areas: ['Educación financiera', 'Ciudadanía digital'],
     programa: 'Buenos Aires Aprende',
     acento: '#34d399',
-    estado: 'en-migracion',
-    urlExterna: 'https://billetera-virtual-educativa-production.up.railway.app',
     recursos: [
       {
         slug: 'docente',
@@ -126,7 +108,6 @@ export const SECUENCIAS: SecuenciaAlojada[] = [
         descripcion:
           'Se entra con el PIN compartido. Crea el aula con su crédito inicial, muestra en vivo quién se conectó y con cuánto saldo, y permite ajustar créditos o cerrar el aula al terminar.',
         ruta: '/billetera-virtual/docente',
-        rutaExterna: '/docente',
       },
       {
         slug: 'generar',
@@ -135,7 +116,6 @@ export const SECUENCIAS: SecuenciaAlojada[] = [
         descripcion:
           'Genera los QR de cada operación —compras, descuentos y reintegros— para imprimir o proyectar. Sirve tanto para una demostración con proyector como para una feria de comercios con varios puestos.',
         ruta: '/billetera-virtual/generar',
-        rutaExterna: '/generar',
       },
       {
         slug: 'estudiante',
@@ -144,7 +124,6 @@ export const SECUENCIAS: SecuenciaAlojada[] = [
         descripcion:
           'El estudiante entra al aula por código o escaneando el QR, elige apodo y avatar, y desde ahí paga escaneando los QR de los puestos. Ve el saldo y el historial de cada movimiento.',
         ruta: '/billetera-virtual/estudiante',
-        rutaExterna: '/estudiante',
       },
     ],
     materiales: [
@@ -166,7 +145,6 @@ export const SECUENCIAS: SecuenciaAlojada[] = [
     grados: 'Todos los grados',
     areas: ['Educación física', 'Convivencia'],
     acento: '#fbbf24',
-    estado: 'disponible',
     recursos: [
       {
         slug: 'torneo',
@@ -185,22 +163,6 @@ export function buscarSecuencia(slug: string): SecuenciaAlojada | undefined {
   return SECUENCIAS.find((s) => s.slug === slug);
 }
 
-/**
- * A dónde manda el botón de un recurso: a su ruta interna si la secuencia ya
- * está alojada acá, o al deploy viejo mientras siga en migración.
- */
-export function enlaceDeRecurso(
-  secuencia: SecuenciaAlojada,
-  recurso: RecursoSecuencia
-): { href: string; externo: boolean } {
-  if (secuencia.estado === 'disponible' || !secuencia.urlExterna) {
-    return { href: recurso.ruta, externo: false };
-  }
-  return {
-    href: `${secuencia.urlExterna}${recurso.rutaExterna ?? ''}`,
-    externo: true,
-  };
-}
 
 export const NIVELES: Record<NivelEducativo, string> = {
   inicial: 'Nivel inicial',

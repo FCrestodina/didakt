@@ -1,7 +1,34 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/billetera/db";
-import { classrooms } from "@/lib/billetera/schema";
-import { eq } from "drizzle-orm";
+import { classrooms, students } from "@/lib/billetera/schema";
+import { eq, desc, sql } from "drizzle-orm";
+
+// Aulas abiertas, para que la docente vuelva a entrar a una que creó otro día.
+// El PIN va en un header y no en la URL, que queda en logs e historial.
+export async function GET(req: NextRequest) {
+  if (req.headers.get("x-teacher-pin") !== process.env.TEACHER_PIN) {
+    return NextResponse.json({ error: "PIN incorrecto." }, { status: 401 });
+  }
+
+  // Join y no subconsulta correlacionada: en un select de una sola tabla drizzle
+  // escribe las columnas sin calificar, y dentro de la subconsulta "id" pasaba a
+  // ser students.id — la cuenta daba siempre 0.
+  const lista = await db
+    .select({
+      id: classrooms.id,
+      code: classrooms.code,
+      initialBalance: classrooms.initialBalance,
+      createdAt: classrooms.createdAt,
+      estudiantes: sql<number>`count(${students.id})::int`,
+    })
+    .from(classrooms)
+    .leftJoin(students, eq(students.classroomId, classrooms.id))
+    .where(eq(classrooms.active, true))
+    .groupBy(classrooms.id)
+    .orderBy(desc(classrooms.createdAt));
+
+  return NextResponse.json(lista);
+}
 
 export async function POST(req: NextRequest) {
   const { pin, code, initialBalance } = await req.json();

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, QrCode, GraduationCap, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, QrCode, GraduationCap, AlertCircle, CheckCircle2, BookOpen, Clock } from "lucide-react";
 
 export default function AyudaPage() {
   return (
@@ -36,6 +36,10 @@ export default function AyudaPage() {
             </li>
           ))}
         </ol>
+        <p className="mt-4 rounded-2xl bg-blue-50 px-4 py-3 text-sm text-blue-900">
+          <strong>¿Querés volver a un aula que creaste otro día?</strong> Entrá con el PIN: vas a ver la lista
+          de aulas abiertas con el botón «Entrar». Cada aula sigue abierta hasta que la cerrás desde su panel.
+        </p>
       </section>
 
       <section className="mb-10">
@@ -74,6 +78,12 @@ export default function AyudaPage() {
         >
           <QrCode className="w-5 h-5" /> Abrir el generador de QR
         </Link>
+        <Link
+          href="/billetera-virtual/casos"
+          className="inline-flex items-center gap-2 rounded-2xl border-2 border-green-500 px-5 py-3 text-green-700 font-bold hover:bg-green-50 active:scale-95 transition-all mb-6 ml-2"
+        >
+          <BookOpen className="w-5 h-5" /> QR listos para los Casos 1, 2 y 3
+        </Link>
         <p className="text-sm text-gray-600 mb-4">
           También podés usar cualquier generador online de QR de texto plano. En todos los casos,
           el contenido del QR es texto plano con este formato:
@@ -102,11 +112,19 @@ tope=2`}</pre>
               {[
                 ["comercio", "No", "Nombre del comercio (texto libre)"],
                 ["producto", "No", "Nombre del producto (texto libre)"],
-                ["precio", "Sí", "Valor en pesos simulados (número entero)"],
+                ["precio", "Sí", "Valor en pesos simulados (número entero), o libre para que el estudiante escriba el monto al pagar"],
                 ["promo", "No", "Valor de la promoción (default: 0)"],
                 ["modo", "No", "porcentaje | monto (default: porcentaje)"],
-                ["tipo", "No", "descuento | reintegro | normal (default: normal)"],
+                ["tipo", "No", "descuento | reintegro | nxm (llevá N, pagá M) | segunda (% en la 2.ª unidad) | normal (default: normal)"],
+                ["lleva / paga", "Con nxm", "Unidades que se llevan y que se pagan: 2 y 1 es un 2x1; 3 y 2, un 3x2"],
                 ["tope", "No", "Máximo de usos por estudiante (opcional)"],
+                ["tope_pesos", "No", "Máximo en pesos que devuelve o descuenta la promo a cada estudiante en el mes"],
+                ["minimo", "No", "Compra mínima para que se aplique la promo"],
+                ["dias", "No", "Días en que aplica, con letras L M X J V S D (ej: V = solo los viernes)"],
+                ["acreditacion", "No", "pendiente: el reintegro lo acreditás vos desde el panel del aula"],
+                ["plazo", "No", "Días hábiles que muestra la app para ese reintegro (ej: 3)"],
+                ["promocion", "No", "Nombre de la promo; los QR con el mismo nombre comparten el tope en pesos"],
+                ["modalidad / vigencia / condiciones", "No", "Datos que se muestran al pagar, sin controlarlos"],
               ].map(([campo, oblig, desc]) => (
                 <tr key={campo} className="hover:bg-gray-50">
                   <td className="px-3 py-2 font-mono text-blue-600 font-medium">{campo}</td>
@@ -114,7 +132,7 @@ tope=2`}</pre>
                     {oblig === "Sí" ? (
                       <span className="text-red-600 font-semibold">Sí</span>
                     ) : (
-                      <span className="text-gray-400">No</span>
+                      <span className="text-gray-400">{oblig}</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-gray-600">{desc}</td>
@@ -162,6 +180,21 @@ tope=2`}</pre>
               desc: "Promo usable solo 2 veces por estudiante.",
               codigo: "comercio=Kiosco Escolar\nproducto=Promo merienda\nprecio=3000\npromo=20\nmodo=porcentaje\ntipo=reintegro\ntope=2",
             },
+            {
+              titulo: "Monto libre con compra mínima",
+              desc: "El estudiante escribe cuánto gasta; con $100.000 o más recibe 20% de reintegro.",
+              codigo: "comercio=Supermercado Verde\nproducto=Compra\nprecio=libre\npromo=20\nmodo=porcentaje\ntipo=reintegro\nminimo=100000",
+            },
+            {
+              titulo: "Llevá 2, pagá 1",
+              desc: "Elige la cantidad al pagar: con 2 gaseosas de $3.000 paga $3.000.",
+              codigo: "comercio=Almacén\nproducto=Gaseosa\nprecio=3000\ntipo=nxm\nlleva=2\npaga=1",
+            },
+            {
+              titulo: "Reintegro que acreditás vos, con tope en pesos",
+              desc: "Cada viaje devuelve el 100% hasta juntar $8.000 en el mes. Queda en «A acreditar» hasta que lo acredites.",
+              codigo: "comercio=Colectivo\nproducto=Pasaje\nprecio=837\npromo=100\nmodo=porcentaje\ntipo=reintegro\nacreditacion=pendiente\nplazo=3\ntope_pesos=8000",
+            },
           ].map((ej) => (
             <div key={ej.titulo} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
@@ -172,6 +205,26 @@ tope=2`}</pre>
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="mb-10">
+        <h2 className="flex items-center gap-2 text-xl font-bold text-gray-800 mb-4">
+          <Clock className="w-6 h-6 text-amber-500" />
+          Reintegros que acreditás vos y mes nuevo
+        </h2>
+        <ul className="space-y-2 text-sm text-gray-700">
+          {[
+            "Un QR de reintegro con acreditacion=pendiente no suma la plata en el momento: el estudiante la ve en la pestaña «A acreditar», con la fecha en que llegaría.",
+            "Desde el panel del aula, en «Reintegros a acreditar», los acreditás cuando quieras (por ejemplo, en la clase siguiente): los de una sola promo, como la del transporte, o todos juntos.",
+            "Cada estudiante ve el reintegro acreditado en su historial, y el saldo sube en ese momento.",
+            "Los topes en pesos (tope_pesos) se cuentan por mes simulado. «Empezar mes nuevo», al final del panel, los vuelve a cero sin tocar saldos ni historial.",
+          ].map((tip, i) => (
+            <li key={i} className="flex gap-2">
+              <span className="text-green-500 mt-0.5">✓</span>
+              <span>{tip}</span>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="mb-10">

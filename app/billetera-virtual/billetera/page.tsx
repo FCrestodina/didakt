@@ -2,14 +2,17 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { QrCode, History, Wallet, LogOut } from "lucide-react";
+import { QrCode, History, Wallet, LogOut, Repeat, Clock } from "lucide-react";
 import dynamic from "next/dynamic";
 import { motion, AnimatePresence } from "framer-motion";
 import type { Student, Movement, QRData } from "@/types/billetera";
 import { formatPesos } from "@/lib/billetera/format";
+import { parseQR } from "@/lib/billetera/qr";
+import type { OpcionesPago } from "@/lib/billetera/payments";
 import { getAvatar } from "@/components/billetera/avatars";
 import { PaymentModal } from "@/components/billetera/PaymentModal";
 import { TransactionList } from "@/components/billetera/TransactionList";
+import { PendingList } from "@/components/billetera/PendingList";
 import { ToastContainer, useToast } from "@/components/billetera/Toast";
 
 const QRScanner = dynamic(
@@ -17,12 +20,19 @@ const QRScanner = dynamic(
   { ssr: false }
 );
 
-type Tab = "billetera" | "historial";
+type Tab = "billetera" | "historial" | "pendientes";
+
+const TABS: { id: Tab; etiqueta: string }[] = [
+  { id: "billetera", etiqueta: "Billetera" },
+  { id: "historial", etiqueta: "Historial" },
+  { id: "pendientes", etiqueta: "A acreditar" },
+];
 
 interface PaymentPreview {
   qrData: QRData;
   limitReached: boolean;
   usosRestantes?: number;
+  acumulado: number;
 }
 
 export default function BilleteraPage() {
@@ -36,6 +46,9 @@ export default function BilleteraPage() {
   const [preview, setPreview] = useState<PaymentPreview | null>(null);
   const [pendingQR, setPendingQR] = useState<string | null>(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
+  // Último QR pagado, para "Pagar de nuevo" sin volver a escanear (los viajes del
+  // Caso 1 son 40 pagos iguales seguidos).
+  const [ultimoQR, setUltimoQR] = useState<string | null>(null);
 
   const studentId = typeof window !== "undefined" ? localStorage.getItem("studentId") : null;
 
@@ -85,24 +98,32 @@ export default function BilleteraPage() {
       qrData: data.qrData,
       limitReached: data.limitReached,
       usosRestantes: data.usosRestantes,
+      acumulado: data.acumulado ?? 0,
     });
   }
 
-  async function processPayment(overrideQR?: string) {
+  async function processPayment(opciones: OpcionesPago, overrideQR?: string) {
     if (!studentId || !pendingQR) return;
     setLoadingPayment(true);
 
     const res = await fetch("/api/payments", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ studentId, qrText: overrideQR ?? pendingQR }),
+      body: JSON.stringify({ studentId, qrText: overrideQR ?? pendingQR, ...opciones }),
     });
 
     const data = await res.json();
     if (!res.ok) {
       add("error", data.error ?? "Error al procesar el pago.");
     } else {
-      add("success", `¡Pago realizado! Saldo: ${formatPesos(data.newBalance)}`);
+      add(
+        "success",
+        data.pendiente
+          ? `¡Pago realizado! Te van a devolver ${formatPesos(data.reintegro)}.`
+          : `¡Pago realizado! Saldo: ${formatPesos(data.newBalance)}`
+      );
+      // El QR escaneado, no el "sin promo": "Pagar de nuevo" repite la compra original.
+      setUltimoQR(pendingQR);
       setPreview(null);
       setPendingQR(null);
       await Promise.all([fetchStudent(), fetchMovements()]);
@@ -110,24 +131,31 @@ export default function BilleteraPage() {
     setLoadingPayment(false);
   }
 
-  async function handleConfirmWithoutPromo() {
+  async function handleConfirmWithoutPromo(opciones: OpcionesPago) {
     if (!preview || !studentId) return;
     const { qrData } = preview;
     const sinPromo = [
       `comercio=${qrData.comercio}`,
       `producto=${qrData.producto}`,
-      `precio=${qrData.precio}`,
+      `precio=${qrData.precioLibre ? "libre" : qrData.precio}`,
       `tipo=normal`,
     ].join("\n");
     setPreview(null);
     setPendingQR(sinPromo);
     await new Promise((r) => setTimeout(r, 0));
-    await processPayment(sinPromo);
+    await processPayment(opciones, sinPromo);
   }
 
   function handleCancel() {
     setPreview(null);
     setPendingQR(null);
+  }
+
+  function cambiarTab(t: Tab) {
+    setTab(t);
+    // La docente puede acreditar reintegros con la app del estudiante abierta: al
+    // mirar el historial o lo pendiente se trae lo último.
+    if (t !== "billetera") void Promise.all([fetchStudent(), fetchMovements()]);
   }
 
   function handleLogout() {
@@ -145,6 +173,9 @@ export default function BilleteraPage() {
   }
 
   const av = getAvatar(student.avatar);
+  const pendientes = movements.filter((m) => m.estadoReintegro === "pendiente");
+  const totalPendiente = pendientes.reduce((suma, m) => suma + m.reintegro, 0);
+  const ultimo = ultimoQR ? parseQR(ultimoQR) : null;
 
   return (
     <main className="min-h-screen max-w-sm mx-auto flex flex-col pb-6">
@@ -166,16 +197,21 @@ export default function BilleteraPage() {
       </header>
 
       <div className="flex border-b border-gray-200 px-5">
-        {(["billetera", "historial"] as Tab[]).map((t) => (
+        {TABS.map(({ id, etiqueta }) => (
           <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors relative ${
-              tab === t ? "text-blue-600" : "text-gray-500 hover:text-gray-700"
+            key={id}
+            onClick={() => cambiarTab(id)}
+            className={`flex-1 py-3 text-sm font-semibold transition-colors relative ${
+              tab === id ? "text-blue-600" : "text-gray-500 hover:text-gray-700"
             }`}
           >
-            {t === "billetera" ? "Billetera" : "Historial"}
-            {tab === t && (
+            {etiqueta}
+            {id === "pendientes" && pendientes.length > 0 && (
+              <span className="ml-1 inline-flex items-center justify-center min-w-5 h-5 px-1 rounded-full bg-amber-500 text-white text-[11px] font-bold">
+                {pendientes.length}
+              </span>
+            )}
+            {tab === id && (
               <motion.div
                 layoutId="tab-indicator"
                 className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full"
@@ -193,7 +229,7 @@ export default function BilleteraPage() {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 10 }}
-              className="flex flex-col items-center gap-8"
+              className="flex flex-col items-center gap-6"
             >
               <div className="w-full bg-gradient-to-br from-blue-600 to-blue-700 rounded-3xl p-8 text-white text-center shadow-xl">
                 <div className="flex items-center justify-center gap-2 mb-2 text-blue-200">
@@ -219,9 +255,31 @@ export default function BilleteraPage() {
                 Pagar con QR
               </button>
 
+              {ultimo?.ok && (
+                <button
+                  onClick={() => ultimoQR && handleQRScan(ultimoQR)}
+                  className="w-full flex items-center justify-center gap-2 rounded-3xl border-2 border-green-500 px-4 py-4 text-green-700 font-bold hover:bg-green-50 active:scale-95 transition-all"
+                >
+                  <Repeat className="w-5 h-5 shrink-0" />
+                  <span className="truncate">
+                    Pagar de nuevo: {ultimo.data.comercio} — {ultimo.data.producto}
+                  </span>
+                </button>
+              )}
+
+              {totalPendiente > 0 && (
+                <button
+                  onClick={() => cambiarTab("pendientes")}
+                  className="flex items-center gap-2 text-sm text-amber-700 hover:text-amber-800 font-medium"
+                >
+                  <Clock className="w-4 h-4" />
+                  Te van a devolver {formatPesos(totalPendiente)}
+                </button>
+              )}
+
               {movements.length > 0 && (
                 <button
-                  onClick={() => setTab("historial")}
+                  onClick={() => cambiarTab("historial")}
                   className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
                 >
                   <History className="w-4 h-4" />
@@ -229,7 +287,7 @@ export default function BilleteraPage() {
                 </button>
               )}
             </motion.div>
-          ) : (
+          ) : tab === "historial" ? (
             <motion.div
               key="historial"
               initial={{ opacity: 0, x: 10 }}
@@ -237,6 +295,15 @@ export default function BilleteraPage() {
               exit={{ opacity: 0, x: -10 }}
             >
               <TransactionList movements={movements} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="pendientes"
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+            >
+              <PendingList movements={movements} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -253,9 +320,10 @@ export default function BilleteraPage() {
         <PaymentModal
           qrData={preview.qrData}
           currentBalance={student.balance}
+          acumulado={preview.acumulado}
           limitReached={preview.limitReached}
           usosRestantes={preview.usosRestantes}
-          onConfirm={() => processPayment()}
+          onConfirm={(opciones) => processPayment(opciones)}
           onConfirmWithoutPromo={preview.limitReached ? handleConfirmWithoutPromo : undefined}
           onCancel={handleCancel}
           loading={loadingPayment}

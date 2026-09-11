@@ -6,6 +6,9 @@ export const classrooms = pgTable("classrooms", {
   initialBalance: integer("initial_balance").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   active: boolean("active").default(true).notNull(),
+  // Mes simulado: los topes en pesos se cuentan dentro del periodo y vuelven a
+  // cero cuando la docente empieza uno nuevo desde el panel.
+  periodo: integer("periodo").default(1).notNull(),
 });
 
 export const students = pgTable(
@@ -35,6 +38,17 @@ export const movements = pgTable("movements", {
   total: integer("total").notNull(),
   balanceAfter: integer("balance_after").notNull(),
   promoKey: text("promo_key"),
+  cantidad: integer("cantidad").default(1).notNull(),
+  // "pago" (compra) o "acreditacion" (reintegros pendientes que liberó la docente).
+  tipoMovimiento: text("tipo_movimiento").default("pago").notNull(),
+  // Agrupa el tope en pesos y los reintegros pendientes (ver grupoPromo).
+  promocion: text("promocion"),
+  periodo: integer("periodo").default(1).notNull(),
+  diaCompra: text("dia_compra"),
+  // null = sin reintegro diferido; "pendiente" hasta que la docente lo acredita.
+  estadoReintegro: text("estado_reintegro"),
+  acreditaEl: timestamp("acredita_el"),
+  acreditadoAt: timestamp("acreditado_at"),
 });
 
 export const promoUsages = pgTable(

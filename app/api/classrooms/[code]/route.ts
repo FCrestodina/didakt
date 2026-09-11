@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/billetera/db";
-import { classrooms, students } from "@/lib/billetera/schema";
+import { classrooms, students, movements } from "@/lib/billetera/schema";
 import { eq, and, sql } from "drizzle-orm";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
@@ -25,7 +25,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
     .where(eq(students.classroomId, classroom.id))
     .orderBy(students.joinedAt);
 
-  return NextResponse.json({ classroom, students: studentList });
+  // Reintegros que esperan que la docente los acredite, por estudiante y promo.
+  const pendientes = await db
+    .select({
+      studentId: movements.studentId,
+      promocion: movements.promocion,
+      total: sql<number>`sum(${movements.reintegro})::int`,
+      compras: sql<number>`count(*)::int`,
+    })
+    .from(movements)
+    .where(and(eq(movements.classroomId, classroom.id), eq(movements.estadoReintegro, "pendiente")))
+    .groupBy(movements.studentId, movements.promocion);
+
+  return NextResponse.json({ classroom, students: studentList, pendientes });
 }
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {

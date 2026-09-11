@@ -3,12 +3,21 @@
 import { useEffect, useState, useCallback, useSyncExternalStore } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Users, RefreshCw, Wallet, QrCode, Pencil, Archive } from "lucide-react";
+import { ArrowLeft, Users, RefreshCw, Wallet, QrCode, Pencil, Archive, BookOpen, Clock, CalendarPlus } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import type { Student } from "@/types/billetera";
 import { formatPesos } from "@/lib/billetera/format";
 import { getAvatar } from "@/components/billetera/avatars";
 import { ToastContainer, useToast } from "@/components/billetera/Toast";
+import { ConfirmarConPin } from "@/components/billetera/ConfirmarConPin";
+
+// Reintegros a acreditar de un estudiante en una promo (GET /api/classrooms/[code]).
+interface Pendiente {
+  studentId: string;
+  promocion: string | null;
+  total: number;
+  compras: number;
+}
 
 interface ClassroomData {
   classroom: {
@@ -16,9 +25,14 @@ interface ClassroomData {
     code: string;
     initialBalance: number;
     active: boolean;
+    periodo: number;
   };
   students: Student[];
+  pendientes: Pendiente[];
 }
+
+// Acción del panel que está pidiendo el PIN. En "acreditar", promocion null = todas.
+type Accion = null | { tipo: "acreditar"; promocion: string | null } | { tipo: "mes" };
 
 // useParams() devuelve el segmento de ruta tal cual (url-encoded). Lo decodificamos
 // una vez para tener el nombre real del aula y re-encodear sin duplicar.
@@ -71,6 +85,8 @@ export default function DocentePanelPage() {
   const [cerrando, setCerrando] = useState(false);
   const [pinCierre, setPinCierre] = useState("");
   const [enviandoCierre, setEnviandoCierre] = useState(false);
+
+  const [accion, setAccion] = useState<Accion>(null);
 
   const fetchData = useCallback(async () => {
     const res = await fetch(`/api/classrooms/${encodeURIComponent(code)}`);
@@ -147,6 +163,43 @@ export default function DocentePanelPage() {
     router.push("/billetera-virtual/docente");
   }
 
+  async function acreditar(pinAccion: string, promocion: string | null) {
+    const res = await fetch(`/api/classrooms/${encodeURIComponent(code)}/reintegros`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: pinAccion, promocion }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      add("error", json.error ?? "No se pudieron acreditar los reintegros.");
+      return;
+    }
+    add(
+      "success",
+      json.compras === 0
+        ? "No quedaban reintegros pendientes."
+        : `Listo: ${formatPesos(json.total)} acreditados a ${json.estudiantes} estudiante${json.estudiantes !== 1 ? "s" : ""}.`
+    );
+    setAccion(null);
+    await fetchData();
+  }
+
+  async function empezarMes(pinAccion: string) {
+    const res = await fetch(`/api/classrooms/${encodeURIComponent(code)}/mes`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pin: pinAccion }),
+    });
+    const json = await res.json();
+    if (!res.ok) {
+      add("error", json.error ?? "No se pudo empezar el mes nuevo.");
+      return;
+    }
+    add("success", `Empezó el mes ${json.periodo}: los topes en pesos volvieron a cero.`);
+    setAccion(null);
+    await fetchData();
+  }
+
   if (error) {
     return (
       <main className="flex min-h-screen items-center justify-center px-6">
@@ -171,7 +224,27 @@ export default function DocentePanelPage() {
     );
   }
 
-  const { classroom, students } = data;
+  const { classroom, students, pendientes } = data;
+
+  // Pendientes agrupados por promo (para acreditar) y por estudiante (para la lista).
+  const porPromo = new Map<string, { promocion: string | null; total: number; compras: number; estudiantes: Set<string> }>();
+  const pendientePorEstudiante = new Map<string, number>();
+  for (const p of pendientes) {
+    const clave = p.promocion ?? "";
+    const g = porPromo.get(clave) ?? { promocion: p.promocion, total: 0, compras: 0, estudiantes: new Set<string>() };
+    g.total += p.total;
+    g.compras += p.compras;
+    g.estudiantes.add(p.studentId);
+    porPromo.set(clave, g);
+    pendientePorEstudiante.set(p.studentId, (pendientePorEstudiante.get(p.studentId) ?? 0) + p.total);
+  }
+  const gruposPendientes = [...porPromo.values()];
+  const totalPendiente = gruposPendientes.reduce((suma, g) => suma + g.total, 0);
+  const grupoElegido =
+    accion?.tipo === "acreditar" && accion.promocion !== null ? porPromo.get(accion.promocion) : undefined;
+  const aAcreditar = grupoElegido
+    ? { total: grupoElegido.total, estudiantes: grupoElegido.estudiantes.size }
+    : { total: totalPendiente, estudiantes: pendientePorEstudiante.size };
 
   return (
     <main className="min-h-screen px-4 py-6 max-w-2xl mx-auto">
@@ -187,6 +260,9 @@ export default function DocentePanelPage() {
         <p className="text-3xl sm:text-4xl font-black tracking-tight break-words">{classroom.code}</p>
         <p className="text-blue-200 text-sm mt-3">
           Crédito inicial: <strong className="text-white">{formatPesos(classroom.initialBalance)}</strong>
+        </p>
+        <p className="text-blue-200 text-sm">
+          Mes simulado: <strong className="text-white">{classroom.periodo}</strong>
         </p>
         <button
           onClick={() => {
@@ -294,12 +370,77 @@ export default function DocentePanelPage() {
         </p>
       </div>
 
-      <Link
-        href="/billetera-virtual/generar"
-        className="flex items-center justify-center gap-2 rounded-2xl bg-green-500 py-3 text-white font-bold hover:bg-green-600 active:scale-95 transition-all mb-6"
-      >
-        <QrCode className="w-5 h-5" /> Generar QR de productos
-      </Link>
+      <div className="grid sm:grid-cols-2 gap-3 mb-6">
+        <Link
+          href="/billetera-virtual/generar"
+          className="flex items-center justify-center gap-2 rounded-2xl bg-green-500 py-3 text-white font-bold hover:bg-green-600 active:scale-95 transition-all"
+        >
+          <QrCode className="w-5 h-5" /> Generar QR de productos
+        </Link>
+        <Link
+          href="/billetera-virtual/casos"
+          className="flex items-center justify-center gap-2 rounded-2xl border-2 border-green-500 py-3 text-green-700 font-bold hover:bg-green-50 active:scale-95 transition-all"
+        >
+          <BookOpen className="w-5 h-5" /> QR de los Casos 1, 2 y 3
+        </Link>
+      </div>
+
+      {gruposPendientes.length > 0 && (
+        <section className="bg-amber-50 border border-amber-200 rounded-3xl p-5 mb-6">
+          <div className="flex items-center gap-2 text-amber-900 mb-1">
+            <Clock className="w-5 h-5" />
+            <h2 className="font-bold">Reintegros a acreditar</h2>
+          </div>
+          <p className="text-sm text-amber-800 mb-4">
+            {formatPesos(totalPendiente)} de {pendientePorEstudiante.size} estudiante
+            {pendientePorEstudiante.size !== 1 ? "s" : ""}. Se suman a los saldos cuando los acreditás.
+          </p>
+          <ul className="space-y-2">
+            {gruposPendientes.map((g) => (
+              <li key={g.promocion ?? ""} className="flex items-center gap-3 bg-white rounded-2xl px-4 py-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">{g.promocion ?? "Reintegros"}</p>
+                  <p className="text-xs text-gray-500">
+                    {g.estudiantes.size} estudiante{g.estudiantes.size !== 1 ? "s" : ""} · {g.compras} compra
+                    {g.compras !== 1 ? "s" : ""} · {formatPesos(g.total)}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setAccion({ tipo: "acreditar", promocion: g.promocion })}
+                  className="rounded-xl bg-emerald-600 px-3 py-2 text-sm font-bold text-white hover:bg-emerald-700 active:scale-95 transition-all"
+                >
+                  Acreditar
+                </button>
+              </li>
+            ))}
+          </ul>
+          {gruposPendientes.length > 1 && (
+            <button
+              onClick={() => setAccion({ tipo: "acreditar", promocion: null })}
+              className="mt-3 w-full rounded-xl border border-emerald-300 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 transition-colors"
+            >
+              Acreditar todos
+            </button>
+          )}
+          {accion?.tipo === "acreditar" && (
+            <div className="mt-4">
+              <ConfirmarConPin
+                key={accion.promocion ?? "todos"}
+                confirmar="Sí, acreditar"
+                enviando="Acreditando..."
+                tono="verde"
+                onConfirm={(p) => acreditar(p, accion.promocion)}
+                onCancel={() => setAccion(null)}
+              >
+                Se suman {formatPesos(aAcreditar.total)} a los saldos de {aAcreditar.estudiantes} estudiante
+                {aAcreditar.estudiantes !== 1 ? "s" : ""}
+                {accion.promocion !== null ? ` por «${accion.promocion}»` : ""}. Cada uno lo ve en su historial
+                como reintegro acreditado.
+              </ConfirmarConPin>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 text-gray-700">
@@ -344,6 +485,11 @@ export default function DocentePanelPage() {
                       <Wallet className="w-3 h-3" />
                       <span>{Math.round(pct)}%</span>
                     </div>
+                    {pendientePorEstudiante.has(s.id) && (
+                      <p className="text-xs text-amber-600 font-semibold mt-0.5">
+                        +{formatPesos(pendientePorEstudiante.get(s.id)!)} a acreditar
+                      </p>
+                    )}
                   </div>
                 </div>
               </li>
@@ -352,7 +498,29 @@ export default function DocentePanelPage() {
         </ul>
       )}
 
-      <div className="mt-10 pt-6 border-t border-gray-100">
+      <div className="mt-10 pt-6 border-t border-gray-100 space-y-3">
+        {accion?.tipo === "mes" ? (
+          <ConfirmarConPin
+            confirmar="Sí, empezar mes nuevo"
+            enviando="Guardando..."
+            onConfirm={empezarMes}
+            onCancel={() => setAccion(null)}
+          >
+            <p className="font-semibold mb-1">¿Empezar el mes {classroom.periodo + 1}?</p>
+            <p>
+              Los topes en pesos de las promos (por ejemplo, los $8.000 del transporte) vuelven a cero para
+              todos. Los saldos, el historial y los reintegros pendientes no cambian.
+            </p>
+          </ConfirmarConPin>
+        ) : (
+          <button
+            onClick={() => setAccion({ tipo: "mes" })}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl border border-gray-200 py-3 text-gray-700 font-semibold hover:bg-gray-50 transition-colors"
+          >
+            <CalendarPlus className="w-4 h-4" /> Empezar mes nuevo
+          </button>
+        )}
+
         {cerrando ? (
           <form onSubmit={handleCerrar} className="space-y-4">
             <div className="rounded-2xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">

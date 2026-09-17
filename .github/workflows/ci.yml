@@ -18,9 +18,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+      # Node 24 = npm 11, el mismo que genera package-lock.json en la PC personal. Con Node 22 (npm 10)
+      # `npm ci` rechazaba el lock como fuera de sync (EUSAGE, "Missing @esbuild/*@0.28.2 from lock file");
+      # medido el 2026-09-16: npm 10 falla y npm 11 pasa con el mismo archivo.
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci
       - run: npm run lint

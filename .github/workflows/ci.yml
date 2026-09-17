@@ -1,0 +1,30 @@
+# CI mínimo (acción 8 de la optimización del sistema, 2026-09-16): lint + typecheck + build + tests
+# unitarios (vitest) en cada push a master y en cada PR. Este repo tiene una sola rama.
+# El build no necesita DATABASE_URL: las conexiones se abren en runtime (ver lib/editor/db.ts).
+# Lint NO bloquea todavía: al instalarlo (2026-09-16) había 31 errores preexistentes
+# (29 @typescript-eslint/no-explicit-any, 1 no-empty-object-type, 1 de react-hooks). Cuando se
+# arreglen, sacar el continue-on-error.
+name: ci
+on:
+  push:
+    branches: [master]
+  pull_request:
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  lint-typecheck-build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+        continue-on-error: true
+      - run: npx tsc --noEmit
+      - run: npm run build
+      - run: npm test

@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const existing = await db.select().from(classrooms).where(eq(classrooms.code, codeNorm));
   if (existing.length > 0) {
     if (existing[0].active) {
-      return NextResponse.json({ error: "Ya existe un aula activa con ese código." }, { status: 409 });
+      return NextResponse.json({ error: "Ya existe un aula activa con ese nombre." }, { status: 409 });
     }
     // El aula cerrada libera el código renombrándose, no borrándose: `students` y
     // `movements` la referencian sin ON DELETE CASCADE, así que un DELETE explota por

@@ -15,7 +15,7 @@ export function CourseSettings() {
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 space-y-5" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-gray-900 font-semibold">
-            <Settings size={18} className="text-indigo-500" /> Configuración del curso
+            <Settings size={18} className="text-indigo-500" /> Configuración de la secuencia
           </div>
           <button onClick={() => setSettingsOpen(false)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100">
             <X size={18} />

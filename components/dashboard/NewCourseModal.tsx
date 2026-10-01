@@ -58,7 +58,7 @@ export function NewCourseModal({ onClose }: Props) {
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-1">Descripción</label>
             <Textarea
-              placeholder="Breve descripción del curso..."
+              placeholder="Breve descripción de la secuencia..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}

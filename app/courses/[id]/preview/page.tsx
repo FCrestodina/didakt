@@ -37,7 +37,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-purple-50 p-6 text-center">
         <div className="text-6xl mb-4">🎉</div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Completaste el curso!</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Completaste la secuencia!</h1>
         <p className="text-gray-500 mb-2">{course.title}</p>
         <p className="text-gray-400 text-sm mb-8">{course.lessons.length} lección{course.lessons.length !== 1 ? 'es' : ''} completadas</p>
         <div className="flex gap-3">
@@ -114,7 +114,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
               {lesson.blocks.map((block) => <BlockRenderer key={block.id} block={block} />)}
             </div>
           ) : (
-            <div className="text-center py-20 text-gray-400">Este curso no tiene lecciones todavía.</div>
+            <div className="text-center py-20 text-gray-400">Esta secuencia no tiene lecciones todavía.</div>
           )}
 
           {/* Nav */}
@@ -128,7 +128,7 @@ export default function PreviewPage({ params }: { params: Promise<{ id: string }
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white text-sm font-medium transition hover:opacity-90"
               style={{ backgroundColor: primary }}
             >
-              {activeIdx === course.lessons.length - 1 ? 'Finalizar curso' : 'Siguiente'} <ArrowRight size={16} />
+              {activeIdx === course.lessons.length - 1 ? 'Finalizar secuencia' : 'Siguiente'} <ArrowRight size={16} />
             </button>
           </div>
         </main>

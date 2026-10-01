@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 npm run dev      # dev server (port 3000, or next available)
 npm run build    # production build + type check
 npm run lint     # ESLint
-npm test         # vitest — 275 tests
+npm test         # vitest — 332 tests
 npx tsc --noEmit # type check only
 npm run db:push  # aplica los tres esquemas Drizzle a DATABASE_URL
 ```
@@ -63,7 +63,7 @@ Cada secuencia vino de su propio repo (`secuencia-stem-primer-ciclo`, `billetera
 - **Cada zona abre su propio pool** (`lib/billetera/db.ts`, `lib/stem/db.ts`, `lib/editor/db.ts`)
   contra la misma base. Funciona, pero son tres pools donde alcanzaría uno: consolidarlos al tunear
   el VPS.
-- **Los tests son la red de seguridad del repo** (275: 56 de billetera, 198 de STEM, 21 del editor).
+- **Los tests son la red de seguridad del repo** (332: 113 de billetera, 198 de STEM, 21 del editor).
   Si tocás `lib/`, `npm test` es lo único que te avisa.
 
 Persistencia del editor — dos API routes, sin backend separado:
@@ -89,12 +89,12 @@ Single store owns the full `Course` object in memory. Key state: `course`, `acti
 Key actions:
 - `setCourse(course)` — replaces entire course, resets `activeLessonId` to first lesson
 - `addBlock(type)` / `updateBlock(id, data)` / `deleteBlock(id)` / `duplicateBlock(id)` — operate on active lesson
-- `reorderBlocks(from, to)` / `reorderLessons(from, to)` — index-based swaps (for dnd-kit)
+- `reorderBlocks(from, to)` — index-based swap (for dnd-kit); las lecciones no se reordenan (no hay `reorderLessons` ni drag-and-drop en `LessonSidebar`)
 - `setSettingsOpen(bool)` — controls the CourseSettings modal
 
 ### Block system
 
-14 block types, all defined as a discriminated union in `types/index.ts`. **Adding a new block type requires changes in 5 places:**
+14 block types, all defined as a discriminated union in `types/index.ts`. **Adding a new block type requires changes in 6 places:**
 
 1. `types/index.ts` — add to `BlockType` union, define interface, add to `Block` union
 2. `store/editorStore.ts` — add `defaultBlock` case
@@ -107,7 +107,7 @@ Current block types: `heading`, `text`, `image`, `video`, `quiz`, `accordion`, `
 
 ### Preview (`app/courses/[id]/preview/page.tsx`)
 
-Stateful client component tracking lesson completion (`Set<number>`). When all lessons are marked done it renders a completion screen instead of the lesson content. The "Siguiente" button both marks current lesson complete and advances — last lesson shows "Finalizar curso".
+Stateful client component tracking lesson completion (`Set<number>`). When all lessons are marked done it renders a completion screen instead of the lesson content. The "Siguiente" button both marks current lesson complete and advances — last lesson shows "Finalizar secuencia".
 
 ### Persistencia del editor (`lib/editor/`)
 

@@ -318,7 +318,7 @@ function Generador() {
                   className={`${INPUT} pl-3.5`}
                   placeholder="Ej: Transporte con QR"
                 />
-                <Ayuda>Los QR con el mismo nombre comparten el tope (por ejemplo, colectivo y subte).</Ayuda>
+                <Ayuda>Los QR con el mismo nombre comparten el tope en pesos (por ejemplo, colectivo y subte).</Ayuda>
               </Field>
             </fieldset>
           )}
